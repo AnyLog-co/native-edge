@@ -20,5 +20,5 @@ zip -r "directoryname".zip "directoryname" -x "\*/__MACOSX*" "*.DS_Store" # the 
 In NativeEdge GUI, go to Blueprints, select upload Blueprint and select appropriate .zip file.
 
 
-# NOTE:  DO NOT USE SPACES in the name for the .zip.  This will cause the NativeEdge upload to fail.
+## NOTE:  DO NOT USE SPACES in the name for the .zip.  This will cause the NativeEdge upload to fail.
 
