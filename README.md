@@ -16,7 +16,7 @@ Run the following command to package the blueprint directory (replace `directory
 
 zip -r "directoryname".zip "directoryname" -x "\*/__MACOSX*" "*.DS_Store" # the latter part removes any MACOS files that will blow up the blueprint
 
-### Step2: Upload into NativeEdge
+### Step 2: Upload into NativeEdge
 In NativeEdge GUI, go to Blueprints, select upload Blueprint and select appropriate .zip file.
 
 
