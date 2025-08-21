@@ -1,0 +1,32 @@
+- name: Ensure env.config file exists
+  stat:
+    path: "{{ env_config_file_path }}"
+  register: env_config_stat
+
+- name: Fail if env.config file is not found
+  fail:
+    msg: The env.config file does not exist."
+  when: not env_config_stat.stat.exists
+
+- name: Update LICENSE_KEY in env.config
+  lineinfile:
+    path: "{{ env_config_file_path }}"
+    regexp: '^LICENSE_KEY='
+    line: 'LICENSE_KEY="{{ ANYLOG_LICENSE }}"'
+  when: env_config_stat.stat.exists
+
+- name: Retrieve GUID from host VM
+  command: sudo dmidecode -s system-uuid
+  register: guid_output
+
+- name: Extract first part of GUID
+  set_fact:
+    guid_first_part: "{{ guid_output.stdout.split('-')[0] }}"
+
+- name: Update NODE_NAME in the env.config
+  lineinfile:
+    path: "{{ env_config_file_path }}"
+    regexp: '^NODE_NAME='
+    line: 'NODE_NAME="{{ NODE_NAME_PREFIX }}-{{ guid_first_part }}"'
+  when: env_config_stat.stat.exists
+    

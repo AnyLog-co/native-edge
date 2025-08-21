@@ -1,0 +1,59 @@
+- name: Ensure base env.config file exists
+  stat:
+    path: "{{ env_base_config_file_path }}"
+  register: env_config_stat
+
+- name: Fail if env.config file is not found
+  fail:
+    msg: The env.config file does not exist."
+  when: not env_config_stat.stat.exists
+
+- name: Update LICENSE_KEY in env.config
+  lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    regexp: '^LICENSE_KEY='
+    line: 'LICENSE_KEY="{{ ANYLOG_LICENSE }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update NODE_TYPE in env.config
+  lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    regexp: '^NODE_TYPE='
+    line: 'NODE_TYPE="{{ NODE_TYPE }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update COMPANY_NAME in env.config
+  lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    regexp: '^COMPANY_NAME='
+    line: 'COMPANY_NAME="{{ COMPANY_NAME }}"'
+  when: env_config_stat.stat.exists
+  
+- name: Update LEDGER_CONN in env.config
+  lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    regexp: '^LEDGER_CONN='
+    line: 'LEDGER_CONN="{{ LEDGER_CONN }}"'
+  when: env_config_stat.stat.exists
+  
+- name: Add NIC_TYPE line to config file
+  ansible.builtin.lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    line: 'NIC_TYPE="{{ NIC_TYPE }}"'
+    create: yes
+
+- name: Retrieve GUID from host VM
+  command: sudo dmidecode -s system-uuid
+  register: guid_output
+
+- name: Extract first part of GUID
+  set_fact:
+    guid_first_part: "{{ guid_output.stdout.split('-')[0] }}"
+
+- name: Update NODE_NAME in the env.config
+  lineinfile:
+    path: "{{ env_base_config_file_path }}"
+    regexp: '^NODE_NAME='
+    line: 'NODE_NAME="{{ NODE_NAME_PREFIX }}-{{ guid_first_part }}"'
+  when: env_config_stat.stat.exists
+    

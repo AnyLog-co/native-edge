@@ -1,0 +1,58 @@
+---
+- name: Deploy AnyLog
+  hosts: vm
+  become: yes
+  vars_files:
+    - defaults.yaml
+  tasks:
+    - name: Include setup tasks
+      include_tasks: prereqs.yaml
+      when: ENVIRONMENT_TYPE == "internet_connected"
+    
+    - name: Download and Prepare offline archives
+      include_tasks: prepare_offline_archives.yaml
+      when: ENVIRONMENT_TYPE == "airgapped"
+
+    - name: Clone docker-compose from AnyLog repository
+      include_tasks: clone_repo.yaml
+      when: ENVIRONMENT_TYPE == "internet_connected"
+
+    - name: Update configuration for node
+      include_tasks: configure_node.yaml
+
+    - name: Perform docker login
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make login ANYLOG_TYPE="{{ DOCKER_PASSWORD }}"
+      args:
+        executable: /bin/bash
+      when: ENVIRONMENT_TYPE == "internet_connected"
+    
+    - name: Deploy AnyLog
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make up ANYLOG_TYPE=generic
+      args:
+        executable: /bin/bash
+    
+    - name: Validate AnyLog Deployment
+      include_tasks: validate.yaml
+
+    - name: Create facts directory if it doesn't exist
+      become: no
+      file:
+        path: "{{ ANSIBLE_FACT_PATH }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Insert AnyLog Capabilities into a fact file
+      become: no
+      copy:
+        content: >
+          {
+            "{{ NODE_NAME_PREFIX }}-{{ guid_first_part }}"
+          }
+        dest: "{{ ANSIBLE_FACT_PATH }}/anylog_endpoint.fact"
+        mode: '0644'
+      delegate_to: localhost

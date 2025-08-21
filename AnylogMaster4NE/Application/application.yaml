@@ -1,0 +1,112 @@
+imports:
+  - plugin:nativeedge-plugin
+  - plugin:nativeedge-utilities-plugin
+  - plugin:nativeedge-ansible-plugin
+
+dsl_definitions:
+  ansible_env_vars: &ansible_default_env_vars
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+    ANSIBLE_INVALID_TASK_ATTRIBUTE_FAILED: "False"
+    ANSIBLE_STDOUT_CALLBACK: json
+    ANSIBLE_FACT_PATH:
+      concat:
+        - { get_input: ansible_external_venv }
+        - "/facts.d/"
+        - { get_sys: [deployment, id] }
+
+  ansible_common_properties: &ansible_common_properties
+    ansible_external_venv: { get_input: ansible_external_venv }
+    log_stdout: { get_input: ansible_log_stdout }
+    connectivity_test_url: { get_input: [connectivity_test_url, { get_input: environment_type }] }
+    timeout: 30
+    debug_level: 0
+    number_of_attempts: 20
+
+  ansible_host_common: &ansible_host_common
+    ansible_host: { get_attribute: [vm_ssh_proxy, eo_proxy_url] }
+    ansible_port: { get_attribute: [vm_ssh_proxy, eo_proxy_port] }
+    ansible_user: { get_input: vm_user_name}
+    ansible_become: True
+    ansible_become_user: { get_input: vm_user_name}
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no -o ServerAliveInterval=50
+    ansible_ssh_private_key_file:
+      get_secret: { get_input: ssh_user_private_key_secret_name }
+
+node_templates:
+
+  deploy_anylog:
+    type: nativeedge.nodes.ansible.Executor
+    properties: &deploy_anylog_inputs
+      <<: *ansible_common_properties
+      playbook_path: Application/ansible/anylog-deploy.yaml
+      sources:
+        all:
+          hosts:
+            vm: *ansible_host_common
+      ansible_env_vars:
+        <<: *ansible_default_env_vars
+      run_data:
+        NODE_NAME_PREFIX: { get_input: node_name_prefix }
+        NODE_TYPE: { get_input: node_type }
+        COMPANY_NAME: { get_input: company_name }
+        NIC_TYPE: { get_input: nic_type }
+        LEDGER_CONN: { get_input: ledger_conn }
+        ANYLOG_LICENSE: { get_secret: { get_input: anylog_license_secret_name }}
+        DOCKER_PASSWORD: 
+          get_secret:
+          - get_input: docker_credentials_secret_name
+          - password
+        ENVIRONMENT_TYPE: { get_input: environment_type }
+        ANSIBLE_USER: { get_input: vm_user_name}
+        ANSIBLE_FACT_PATH:
+          concat:
+            - { get_input: ansible_external_venv }
+            - "/facts.d/"
+            - { get_sys: [deployment, id] }
+        ARTIFACT_BASE_URL: { get_input: artifact_base_url}
+        ARTIFACT_BASE_URL_PARAMS: { get_input: artifact_base_url_parameters }
+        ARTIFACT_CURL_CONFIG: { get_input: artifact_download_config_secret_name }
+        ARTIFACT_DOWNLOAD_HEADERS:
+          get_secret:
+            - { get_input: artifact_configuration_secret_name }
+            - "artifact_download_headers"
+        ANYLOG_GIT_ARCHIVE: { get_input: anylog_git_archive }
+        ANYLOG_GIT_ARCHIVE_CHECKSUM: { get_input: anylog_git_archive_checksum }
+        ANYLOG_DOCKER_IMAGE_ARCHIVE: { get_input: anylog_docker_image_archive }
+        ANYLOG_DOCKER_IMAGE_ARCHIVE_CHECKSUM: { get_input: anylog_docker_image_archive_checksum } 
+        DEB_PACKAGES_FILE: { get_input: deb_packages_file }
+        DEB_PACKAGES_FILE_CHECKSUM: { get_input: deb_packages_file_checksum }
+      sensitive_keys:
+        - ANYLOG_LICENSE
+        - ANSIBLE_USER
+        - DOCKER_PASSWORD
+        - ansible_user
+        - ansible_ssh_private_key_file
+        - ARTIFACT_CURL_CONFIG
+        - ARTIFACT_DOWNLOAD_HEADERS
+
+    interfaces:
+      nativeedge.interfaces.lifecycle:
+        create:
+          implementation: ansible.ne_ansible.tasks.run
+          inputs: *deploy_anylog_inputs
+        start:
+          implementation: Application/scripts/set_application_capabilities.sh
+        delete:
+          implementation: ansible.ne_ansible.tasks.run
+          inputs:
+            <<: *ansible_common_properties
+            playbook_path:  Application/ansible/anylog-remove.yaml
+            sensitive_keys:
+              - ansible_user
+              - ansible_ssh_private_key_file
+            sources:
+              all:
+                hosts:
+                  vm: *ansible_host_common
+            ansible_env_vars:
+              <<: *ansible_default_env_vars
+    
+    relationships:
+      - type: nativeedge.relationships.depends_on
+        target: vm_info

@@ -1,0 +1,108 @@
+- name: Check if Docker container is running
+  become: yes
+  shell: "sudo docker ps --filter 'name={{ NODE_NAME_PREFIX }}-{{ guid_first_part }}' --filter 'status=running' --format '{{'{{'}}.Names{{'}}'}}'"
+  register: container_status
+  retries: 12  # Retry 12 times
+  delay: 5    # Wait 5 seconds between retries
+  until: container_status.stdout != ""
+
+- name: Fail if container is not running
+  fail:
+    msg: "The container {{ NODE_NAME_PREFIX }}-{{ guid_first_part }} is not running."
+  when: container_status.stdout == ""
+
+- name: Pause for a few seconds
+  pause:
+    seconds: 5 
+
+- name: Load expect module inside container for online deployment
+  become: yes
+  when: ENVIRONMENT_TYPE == "internet_connected"
+  shell: |
+    sudo docker exec {{ NODE_NAME_PREFIX }}-{{ guid_first_part }} /bin/bash -c "
+    apt-get update
+    apt-get -y install expect
+    "
+  register: apt_output
+
+- name: Print apt output
+  debug:
+    var: apt_output
+  when: apt_output is defined
+
+- name : Copy deb packages to the AnyLog container for airgapped deployment
+  become: yes
+  when: ENVIRONMENT_TYPE == "airgapped"
+  shell: |
+    packages=("expect*.deb" "tcl-expect*.deb" "tcl*.deb" "libtcl*.deb" "libc6*.deb")
+    for pattern in "${packages[@]}"; do
+      for file in "{{ deb_packages_path }}"/$pattern; do
+        sudo docker cp "$file" {{ NODE_NAME_PREFIX }}-{{ guid_first_part }}:/tmp
+      done
+    done
+  args:
+    executable: /bin/bash
+
+- name: Load expect module inside container for airgapped deployment
+  become: yes
+  when: ENVIRONMENT_TYPE == "airgapped"
+  shell: |
+    sudo docker exec {{ NODE_NAME_PREFIX }}-{{ guid_first_part }} /bin/bash -c "
+    dpkg -i /tmp/*.deb
+    "
+  register: docker_exec_output
+  args:
+    executable: /bin/bash
+
+
+- name: Print docker-exec output
+  debug:
+    var: docker_exec_output
+  when: docker_exec_output is defined
+
+- name: Run script in Docker container
+  become: yes
+  shell: |
+    sudo docker exec {{ NODE_NAME_PREFIX }}-{{ guid_first_part }} /bin/bash -c "
+    # Find the executable matching the pattern anylog_
+    anylog_executable=\$(find . -name 'anylog_*' -type f -executable)
+
+    # Check if the executable was found
+    if [ -z \"\$anylog_executable\" ]; then
+      echo 'No executable matching \"anylog_\" found.'
+      exit 1
+    fi
+
+    # Use expect to run commands in the interactive shell
+    /usr/bin/expect <<EOF
+    spawn \$anylog_executable
+
+    # Wait for the prompt
+    expect 'AL >'
+    expect 'AL >'
+    # Send commands to the interactive shell
+    send \"get processes\r\"
+
+    expect 'AL >'
+
+    send \"get version\r\"
+
+    expect 'AL >'
+    # Exit the interactive shell
+    send \"exit node\r\"
+
+    # Close the expect script
+    expect eof
+    EOF
+    "
+  register: output
+
+- name: Print output
+  debug:
+    var: output
+    
+- name: Print validation successful message
+  debug:
+    msg: "AnyLog Validation Successful"
+  when: output.rc == 0
+

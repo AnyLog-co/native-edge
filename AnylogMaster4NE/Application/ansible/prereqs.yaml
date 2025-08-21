@@ -1,0 +1,21 @@
+- name: Check if directory exists from older deployment
+  stat:
+    path: "{{ repo_local_dir_path }}"
+  register: dir_to_delete
+
+- name: Delete the directory if it exists
+  become: yes
+  file:
+    path: "{{ repo_local_dir_path }}"
+    state: absent
+  when: dir_to_delete.stat.exists and dir_to_delete.stat.isdir
+  
+- name: Install Docker, Docker-compose and Make
+  become: yes
+  ansible.builtin.shell: |
+    sudo snap install docker 
+    sudo apt-get -y install docker-compose 
+    sudo apt-get -y install make
+  args:
+    executable: /bin/bash
+  when: ENVIRONMENT_TYPE == "internet_connected"

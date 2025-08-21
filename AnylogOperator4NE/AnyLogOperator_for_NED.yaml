@@ -1,0 +1,79 @@
+tosca_definitions_version: nativeedge_1_1
+description: >
+  Deploys VM with Anylog Operator Node
+
+imports:
+  - nativeedge/types/types.yaml
+  - Infrastructure/inputs_common.yaml
+  - Infrastructure/inputs.yaml
+  - Infrastructure/vm.yaml
+  - Infrastructure/outputs.yaml
+  - Application/inputs_common.yaml
+  - Application/inputs.yaml
+  - Application/application.yaml
+  - Application/outputs.yaml
+
+
+input_groups:
+  app:
+    display_label: AnyLog Operator
+    collapsible: true
+    index: 0
+    inputs:
+      - node_name_prefix
+      - node_type
+      - company_name
+      - nic_type
+      - ledger_conn
+      - db_type
+      - db_user
+      - db_passwd_secret
+      - db_ip
+      - db_port
+      - cluster_name
+      - anylog_license_secret_name
+      - environment_type
+      - docker_credentials_secret_name
+  ned:
+    display_label: Anylog Operator Node VM
+    collapsible: true
+    index: 1
+    inputs:
+      - deployment_id
+      - vm_user_name
+      - os_type
+      - vcpus
+      - memory_size
+      - os_disk_size
+      - disk
+      - segment_name
+      - ssh_user_private_key_secret_name
+      - ssh_user_public_key_secret_name
+  dhcp:
+    display_label: Network Interfaces Configuration
+    collapsible: true
+    index: 2
+    inputs:
+      - dhcp
+      - static_ip
+      - gateway
+      - dns
+
+labels:
+  csys-obj-type:
+    values:
+      - environment
+  target_environment:
+    values:
+      - ned
+  vendor:
+    values:
+      - AnyLog
+  solution:
+    values:
+      - Operator
+
+blueprint_labels:
+  env:
+    values:
+      - NED

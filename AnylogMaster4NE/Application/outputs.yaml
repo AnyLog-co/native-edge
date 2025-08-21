@@ -1,0 +1,5 @@
+capabilities:
+
+  node_name:
+    description: Node Name Prefix
+    value:  { get_attribute: [deploy_anylog, application_details] }

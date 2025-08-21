@@ -1,0 +1,24 @@
+capabilities:
+
+  vm_details:
+    description: VM ECE details
+    value:
+      serviceTag: { get_attribute: [vm, capabilities, service_tag] }
+      vmRef: { get_attribute: [vm, capabilities, vm_name] }
+      port: { get_input: proxy_port }
+  
+  vm_name:
+    description: Virtual Machine Name
+    value: { get_attribute: [vm, capabilities, name] }
+
+  vm_ip:
+    description: IP of Virtual Machine
+    value: { get_attribute: [vm_info, capabilities, vm_public_ip] }
+  
+  vm_username:
+    description: Username of the VM
+    value: { get_input: vm_user_name }
+
+  vm_ssh_key_private:
+    description: SSH private key secret name for the Virtuakl machine
+    value: { get_input: ssh_user_private_key_secret_name }

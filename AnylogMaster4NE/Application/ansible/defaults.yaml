@@ -1,0 +1,7 @@
+---
+home_dir: "/home/{{ ansible_user }}"
+git_repo_url: https://github.com/AnyLog-co/docker-compose
+repo_local_dir_path: "{{ home_dir }}/docker-compose"
+env_base_config_file_path: "{{ repo_local_dir_path }}/docker-makefiles/master-configs/base_configs.env"
+env_advance_config_file_path: "{{ repo_local_dir_path }}/docker-makefiles/master-configs/advance_configs.env"
+deb_packages_path: "{{ home_dir }}/deb_packages"

@@ -1,0 +1,102 @@
+- name: Download Debian packages
+  ansible.builtin.get_url:
+    url: "{{ [ARTIFACT_BASE_URL, DEB_PACKAGES_FILE] | path_join }}"
+    validate_certs: false
+    headers: "{{ ARTIFACT_DOWNLOAD_HEADERS }}"
+    dest: "{{ [home_dir, DEB_PACKAGES_FILE] | path_join }}"
+    mode: "0744"
+    checksum: "{{ 'sha256:' + DEB_PACKAGES_FILE_CHECKSUM if DEB_PACKAGES_FILE_CHECKSUM else '' }}"
+  become: true
+  register: debian_packages
+
+- name: Create target directory and unzip Debian packages
+  become: yes
+  shell: |
+    mkdir -p "{{ deb_packages_path }}"
+    tar -xzf "{{ [home_dir, DEB_PACKAGES_FILE] | path_join }}" -C "{{ deb_packages_path }}"
+
+- name: Load Debian packages
+  become: yes
+  shell: sudo dpkg -i *.deb
+  args:
+    chdir: "{{ deb_packages_path }}"
+
+- name: Install Docker snap package
+  become: yes
+  shell: |
+    sudo snap ack docker*.assert
+    sudo snap install docker*.snap
+  args:
+    chdir: "{{ deb_packages_path }}"
+
+- name: Download AnyLog docker image tarball
+  ansible.builtin.get_url:
+    url: "{{ [ARTIFACT_BASE_URL, ANYLOG_DOCKER_IMAGE_ARCHIVE] | path_join }}"
+    validate_certs: false
+    headers: "{{ ARTIFACT_DOWNLOAD_HEADERS }}"
+    dest: "{{ [home_dir, ANYLOG_DOCKER_IMAGE_ARCHIVE] | path_join }}"
+    mode: "0744"
+    checksum: "{{ 'sha256:' + ANYLOG_DOCKER_IMAGE_ARCHIVE_CHECKSUM if ANYLOG_DOCKER_IMAGE_ARCHIVE_CHECKSUM else '' }}"
+  become: true
+  register: download_docker_image
+
+- name: Unzip Docker image
+  shell: >
+    gunzip -c "{{ [home_dir, ANYLOG_DOCKER_IMAGE_ARCHIVE] | path_join }}" 
+    > "{{ home_dir }}/anylog_container_image.tar"
+  args:
+    chdir: "{{ home_dir }}"
+
+- name: Load Docker image
+  become: yes
+  shell: sudo docker load -i "{{ home_dir }}/anylog_container_image.tar"
+  register: docker_load_result
+  changed_when: "'Loaded image:' in docker_load_result.stdout"
+
+- name: Verify the image is loaded
+  shell: "sudo docker images | grep -q 'anylogco/anylog-network'"
+  become: true
+  register: image_check_output
+  failed_when: image_check_output.rc != 0
+  changed_when: false
+  
+- name: Download AnyLog docker-compose git archive
+  ansible.builtin.get_url:
+    url: "{{ [ARTIFACT_BASE_URL, ANYLOG_GIT_ARCHIVE] | path_join }}"
+    validate_certs: false
+    headers: "{{ ARTIFACT_DOWNLOAD_HEADERS }}"
+    dest: "{{ [home_dir, ANYLOG_GIT_ARCHIVE] | path_join }}"
+    mode: "0744"
+    checksum: "{{ 'sha256:' + ANYLOG_GIT_ARCHIVE_CHECKSUM if ANYLOG_GIT_ARCHIVE_CHECKSUM else '' }}"
+  become: true
+  register: anylog_git
+
+- name: Create target directory
+  file:
+    path: "{{ home_dir }}/git_archive"
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Unzip git archive to specific directory
+  unarchive:
+    src: "{{ [home_dir, ANYLOG_GIT_ARCHIVE] | path_join }}"
+    dest: "{{ home_dir }}/git_archive"
+    remote_src: yes
+  become: yes
+
+- name: Find the unarchived git directory
+  shell: find "{{ home_dir }}/git_archive" -mindepth 1 -maxdepth 1 -type d
+  register: unarchived_git_dir
+
+- name: Rename the directory to docker-compose
+  shell: mv "{{ unarchived_git_dir.stdout }}" "{{ home_dir }}/git_archive/docker-compose"
+  become: yes
+
+- name: Move docker-compose directory under home_dir
+  shell: mv "{{ home_dir }}/git_archive/docker-compose" "{{ repo_local_dir_path }}"
+  become: yes
+
+
+
+

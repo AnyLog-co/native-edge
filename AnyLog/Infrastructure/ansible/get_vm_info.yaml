@@ -1,0 +1,17 @@
+---
+- name: Get VM Info
+  hosts: vm
+  become_user: "{{ vm_user_name }}"
+  gather_facts: true
+  tasks:
+    - name: Include nativeedge_endpoint role if target_env is NativeEdge_Endpoint
+      include_role:
+        name: nativeedge_endpoint
+      vars:
+        node_instance_id: "{{ node_instance_id }}"
+      when: target_env == "NativeEdge_Endpoint"
+
+    - name: Debug message if not NativeEdge_Endpoint
+      debug:
+        msg: "No roles to run as env is {{ target_env }}."
+      when: target_env not in ['NativeEdge_Endpoint']

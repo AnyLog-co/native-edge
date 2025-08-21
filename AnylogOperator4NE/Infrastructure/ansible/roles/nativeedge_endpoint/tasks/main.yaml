@@ -1,0 +1,28 @@
+---
+- name: Get the IP address
+  ansible.builtin.debug:
+    msg: "enp1s0: {{ ansible_enp1s0.ipv4.address }}"
+  failed_when: ansible_enp1s0.ipv4.address is not defined
+
+- name: Get the MAC address
+  ansible.builtin.debug:
+    msg: "enp1s0: {{ ansible_enp1s0.macaddress }}"
+  failed_when: ansible_enp1s0.macaddress is not defined
+
+- name: Create a directory
+  ansible.builtin.file:
+    path: /tmp/{{ node_instance_id }}
+    state: directory
+  delegate_to: localhost
+
+- name: Create a temp file with VM IP
+  ansible.builtin.copy:
+    content: "{{ ansible_enp1s0.ipv4.address }}"
+    dest: /tmp/{{ node_instance_id }}/ip
+  delegate_to: localhost
+
+- name: Create a temp file with VM MAC
+  ansible.builtin.copy:
+    content: "{{ ansible_enp1s0.macaddress }}"
+    dest: /tmp/{{ node_instance_id }}/mac
+  delegate_to: localhost
