@@ -1,0 +1,216 @@
+imports:
+  - plugin:nativeedge-plugin
+  - plugin:nativeedge-utilities-plugin
+  - plugin:nativeedge-fabric-plugin
+  - plugin:nativeedge-ansible-plugin
+
+dsl_definitions:
+  ansible_env_vars: &ansible_default_env_vars
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+    ANSIBLE_INVALID_TASK_ATTRIBUTE_FAILED: "False"
+    ANSIBLE_STDOUT_CALLBACK: json
+    ANSIBLE_FACT_PATH:
+      concat:
+        - { get_input: ansible_external_venv }
+        - "/facts.d/"
+        - { get_sys: [deployment, id] }
+
+  ansible_common_properties: &ansible_common_properties
+    ansible_external_venv: { get_input: ansible_external_venv }
+    log_stdout: { get_input: ansible_log_stdout }
+    connectivity_test_url: { get_input: [connectivity_test_url, { get_input: environment_type }] }
+    timeout: 30
+    debug_level: 0
+    number_of_attempts: 20
+
+  ansible_host_common: &ansible_host_common
+    ansible_host: { get_attribute: [vm_ssh_proxy, eo_proxy_url] }
+    ansible_port: { get_attribute: [vm_ssh_proxy, eo_proxy_port] }
+    ansible_user: { get_input: vm_user_name}
+    ansible_become: True
+    ansible_become_user: { get_input: vm_user_name}
+    ansible_ssh_common_args: -o StrictHostKeyChecking=no -o ServerAliveInterval=50
+    ansible_ssh_private_key_file:
+      get_secret: { get_input: ssh_user_private_key_secret_name }
+
+
+node_templates:
+
+  binary_image:
+    type: nativeedge.nodes.template.BinaryImage
+    properties:
+      binary_image_config:
+        artifact:
+          path: { get_input: binary_image_artifact_url }
+          username: { get_input: binary_image_artifact_username }
+          access_token:
+            get_secret:
+              get_input: binary_image_artifact_access_token_secret_name
+        version: { get_input: binary_image_version }
+    interfaces:
+      nativeedge.interfaces.lifecycle:
+        precreate:
+          implementation:
+            nativeedge.nativeedge_plugin.tasks.validate_binary_image_config
+        create:
+          implementation:
+            nativeedge.nativeedge_plugin.tasks.upload_binary
+        delete:
+          implementation:
+            nativeedge.nativeedge_plugin.tasks.delete_binary
+
+  netplan_node:
+    type: nativeedge.nodes.CloudInit.CloudConfig
+    interfaces:
+      nativeedge.interfaces.lifecycle:
+        create:
+          implementation: Infrastructure/scripts/prepare_resource_config.py
+          executor: central_deployment_agent
+          inputs:
+            template: Infrastructure/templates/network_config.yaml
+            parameters:
+              use_dhcp: { get_input: dhcp }
+              static_ip: { get_input: static_ip }
+              gateway: { get_input: gateway }
+              dns: { get_input: dns }
+
+  cloud_init:
+    type: nativeedge.nodes.CloudInit.CloudConfig
+    properties:
+      resource_config:
+        runcmd:
+          - netplan apply
+          - systemctl restart sshd
+        write_files:
+          - content: { get_attribute: [SELF, netplan_encoded] }
+            encoding: b64
+            path: /etc/netplan/50-cloud-init.yaml
+          - content: |
+              ClientAliveInterval 1800
+              ClientAliveCountMax 3
+            path: /etc/ssh/sshd_config
+            append: true
+        disable_root_opts: >
+          no-port-forwarding,no-agent-forwarding,no-X11-forwarding
+        disable_root: false
+        ssh_authorized_keys:
+          - get_secret: { get_input: ssh_user_public_key_secret_name }
+        users:
+          - name: { get_input: vm_user_name }
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: users, admin
+            shell: /bin/bash
+            ssh_authorized_keys:
+              - get_secret: { get_input: ssh_user_public_key_secret_name }
+    interfaces:
+      nativeedge.interfaces.lifecycle:
+        precreate:
+          implementation: Infrastructure/scripts/prepare_netplan.py
+          executor: central_deployment_agent
+          inputs:
+            netplan_input: {get_attribute: [netplan_node, template_resource_config]}
+        create:
+          inputs:
+            resource_config:
+              merge:
+                - { get_attribute: [SELF, resource_config] }
+                - { get_input: cloudinit }
+    relationships:
+      - type: nativeedge.relationships.depends_on
+        target: netplan_node
+
+  vm:
+    type: nativeedge.nodes.ServiceComponent
+    properties:
+      resource_config:
+        blueprint:
+          external_resource: true
+          id: Virtual_Machine_with_cloud-init_for_NativeEdge_Endpoint
+          version: 2.1.0.0
+        deployment:
+          inputs:
+            vm_user_name: { get_input: vm_user_name }
+            key_public_secret_name: { get_input: ssh_user_public_key_secret_name }
+            key_private_secret_name: { get_input: ssh_user_private_key_secret_name }
+            service_tag: { get_capability: [get_input: deployment_id, ece_service_tag] }
+            name: { get_input: hostname }
+            image: {get_attribute: [binary_image, binary_details, extra, artifact_id]}
+            os_type: { get_input: os_type }
+            cpu: { get_input: vcpus }
+            memory: { get_input: memory_size }
+            storage: { get_input: os_disk_size }
+            disk: { get_input: disk }
+            hardware_options.vTPM: { get_input: hardware_options.vTPM }
+            hardware_options.secure_boot: { get_input: hardware_options.secure_boot }
+            hardware_options.firmware_type: { get_input: hardware_options.firmware_type }
+            enable_management: { get_input: enable_management }
+            network_settings: { get_input: network_settings }
+            usb: { jmespath: ["* || `[]`", {"input": { get_input: usb }}] }
+            serial_port: { jmespath: ["* || `[]`", {"input": { get_input: serial_port }}] }
+            video: { jmespath: ["* || `[]`", {"input": { get_input: video }}] }
+            gpu: { get_input: gpu_passthrough }
+            cloudinit:
+              { get_attribute: [cloud_init, resource_config] }
+            iso_files: { get_input: iso_files }
+    relationships:
+       - type: nativeedge.relationships.depends_on
+         target: binary_image
+       - type: nativeedge.relationships.depends_on
+         target: cloud_init
+
+  vm_ssh_proxy:
+    type: nativeedge.nodes.Root
+    interfaces:
+      nativeedge.interfaces.lifecycle:
+        create:
+          implementation: nativeedge.nativeedge_plugin.tasks.get_eo_proxy
+          max_retries: 2
+          inputs:
+            serviceTag:
+              get_attribute: [vm, capabilities, service_tag]
+            vmRef:
+              get_attribute: [vm, capabilities, vm_name]
+            port: { get_input: proxy_port }
+        update:
+          implementation: nativeedge.nativeedge_plugin.tasks.get_eo_proxy
+          max_retries: 2
+          inputs:
+            serviceTag:
+              get_attribute: [vm, capabilities, service_tag]
+            vmRef:
+              get_attribute: [vm, capabilities, vm_name]
+            port: { get_input: proxy_port }
+        check_drift:
+          implementation: Infrastructure/scripts/check_drift.py
+    relationships:
+       - type: nativeedge.relationships.depends_on
+         target: vm
+
+  vm_info:
+    type: nativeedge.nodes.ansible.Executor
+    properties:
+      <<: *ansible_common_properties
+      playbook_path: Infrastructure/ansible/get_vm_info.yaml
+      sources:
+        all:
+          hosts:
+            vm: *ansible_host_common
+      ansible_env_vars:
+        <<: *ansible_default_env_vars
+      run_data:
+        node_instance_id:
+          get_attribute: [SELF, node_instance_id]
+        target_env: NativeEdge_Endpoint
+        vm_user_name: { get_input: vm_user_name }
+      sensitive_keys:
+        - ansible_user
+        - ansible_ssh_private_key_file
+    relationships:
+      - type: nativeedge.relationships.connected_to
+        target: vm_ssh_proxy
+        target_interfaces:
+          nativeedge.interfaces.relationship_lifecycle:
+            establish:
+              implementation:
+                Infrastructure/scripts/get_vm_info.py
+              executor: central_deployment_agent
