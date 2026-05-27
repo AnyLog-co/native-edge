@@ -1,0 +1,373 @@
+inputs:
+
+  node_name_prefix:
+    type: string
+    hidden: false
+    allow_update: false
+    display_label: NODE_NAME
+    description: |
+      AnyLog node name.
+      (an auto-generated suffix will also be added).
+      Cannot contain characters other than:
+      letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+      Can be up to 63 characters long.
+    constraints:
+    - pattern: ^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)$
+      error_message: |
+        Must be letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+        No more than 64 characters.
+    - max_length: 64
+    default: anylog
+    display:
+      group: application
+      index: 5
+
+  cluster_name:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: CLUSTER_NAME
+    description: |
+      AnyLog cluster name (operator and query nodes).
+    constraints:
+    - pattern: ^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)$
+      error_message: |
+        Must be letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+        No more than 64 characters.
+    - max_length: 64
+    default: anylog-cluster
+    display:
+      group: application
+      index: 6
+
+  include_grafana:
+    type: boolean
+    hidden: false
+    allow_update: false
+    display_label: Deploy Grafana dashboard
+    description: |
+      When enabled, deploys the optional Grafana container (same as
+      AnylogQueryDemo-in-a-box4NE). Requires internet access to pull
+      anylogco/oh-grafana unless pre-loaded on the endpoint.
+    default: false
+    display:
+      group: application
+      index: 7
+
+  include_remote_gui:
+    type: boolean
+    hidden: false
+    allow_update: false
+    display_label: Deploy AnyLog Remote-GUI
+    description: |
+      When enabled, deploys AnyLog Remote-GUI (web management UI on port 31800,
+      API on 8080) using docker-compose support/remote-gui from the cloned repo.
+      Requires internet access to pull anylogco/remote-gui unless pre-loaded.
+    default: true
+    display:
+      group: application
+      index: 8
+
+  remote_gui_conn:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: Remote-GUI default REST connection
+    description: |
+      IP:port of the AnyLog REST endpoint the GUI connects to by default.
+      Use the master REST port (32049) unless you want another node.
+    default: 127.0.0.1:32049
+    only_with:
+      include_remote_gui: [true]
+    display:
+      group: application
+      index: 9
+
+  remote_gui_fe_port:
+    type: integer
+    hidden: true
+    allow_update: false
+    display_label: Remote-GUI frontend port
+    default: 31800
+    only_with:
+      include_remote_gui: [true]
+
+  company_name:
+    type: string
+    hidden: false
+    allow_update: false
+    display_label: COMPANY_NAME
+    description: |
+      Name of Company.
+      Cannot contain characters other than:
+      letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+      Can be up to 63 characters long.
+    constraints:
+    - pattern: ^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)$
+      error_message: |
+        Must be letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+        No more than 64 characters.
+    - max_length: 64
+    default: new-company
+    display:
+      group: application
+      index: 10
+      
+  nic_type:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: NIC_TYPE
+    description: |
+      AnyLog Default NIC
+      Ex: enp1s0
+    constraints:
+    - pattern: ^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)$
+      error_message: |
+        Must be letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+        No more than 64 characters.
+    - max_length: 64
+    default: enp1s0
+    display:
+      group: application
+      index: 11
+      
+  ledger_conn:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: LEDGER_CONN
+    description: |
+      AnyLog LEDGER_CONN
+      Ex: ip:tcp_port
+    default: 127.0.0.1:32048
+    display:
+      group: application
+      index: 12
+      
+  db_type:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: DB_TYPE
+    description: |
+      AnyLog DB_TYPE
+      Ex: sqlite or psql
+    default: sqlite
+    display:
+      group: application
+      index: 13
+  
+  db_user:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: DB_USER
+    description: |
+      AnyLog DB psql user id.
+    constraints:
+    - pattern: ^(?!-)[a-zA-Z0-9-]{1,63}(?<!-)$
+      error_message: |
+        Must be letters (a-z, A-Z), numbers (0-9), or hyphens (-).
+        No more than 64 characters.    
+    - max_length: 64
+    default: dbuser
+    display:
+      group: application
+      index: 14
+      
+  db_passwd_secret:
+    type: secret_key
+    hidden: false
+    allow_update: true
+    display_label: DB_PASSWD
+    description: |
+      Secret name containing DB password.
+    display:
+      group: application
+      index: 15
+  
+  db_ip:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: DB_IP
+    description: |
+      AnyLog DB psql IP addr.
+      Ex: 127.0.0.1
+    default: 127.0.0.1
+    display:
+      group: application
+      index: 16
+
+  db_port:
+    type: string
+    hidden: false
+    allow_update: true
+    display_label: DB_PORT
+    description: |
+      AnyLog DB psql tcp port.   
+    default: 4321
+    display:
+      group: application
+      index: 17
+
+  anylog_license_secret_name:
+    type: secret_key
+    hidden: false
+    allow_update: true
+    display_label: Anylog License Secret Name
+    description: |
+      Secret name containing AnyLog License.
+    display:
+      group: application
+      index: 18
+
+  docker_credentials_secret_name:
+    type: secret_key
+    hidden: false
+    required: false
+    allow_update: false
+    display_label: Anylog Docker Credential Secret Name
+    description: |
+      Secret name containing details needed for pulling 
+      AnyLog Docker image.
+    constraints:
+    - type: docker_configuration_secret_name
+    only_with: 
+      environment_type: ['internet_connected']
+    display:
+      group: application
+      index: 19
+
+  verify_checksums:
+    type: boolean
+    display_label: Verify checksum of packages
+    hidden: false
+    required: false
+    only_with: 
+      environment_type: ['airgapped']
+    description: |
+      When selected, SHA-256 checksum of downloaded packages will be verified.
+    default: false
+    display:
+      group: deployment_config
+      index: 20
+
+  anylog_git_archive:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      environment_type: ['airgapped']
+    required: false
+    default: "docker-compose-main.zip"
+    display_label: AnyLog Docker-Compose git archive
+    description: |
+      Name of the archive containing docker-compose files to deploy AnyLog.
+    constraints:
+      - pattern: '^[\w\-. ]+$'
+        error_message: Cannot contain leading or trailing spaces.
+    display:
+      group: deployment_config
+      index: 21
+  
+  anylog_git_archive_checksum:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      environment_type: ['airgapped']
+      verify_checksums: [true]
+    required: false
+    default: ""
+    display_label: AnyLog Docker-Compose git Archive SHA-256 Checksum
+    description: |
+      SHA-256 checksum of the archive docker-compose files to deploy AnyLog.
+    constraints:
+      - pattern: '^$|^[a-fA-F0-9]{64}$'
+        error_message: |
+          Can contain only valid SHA-256 characters (a-f, A-F, 0-9) of length 64
+          or be an empty string.
+    display:
+      group: deployment_config
+      index: 22
+
+  anylog_docker_image_archive:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      environment_type: ['airgapped']
+    required: false
+    default: "anylog_container_image.tar.gz"
+    display_label: AnyLog Docker image archive
+    description: |
+      Name of the archive containing conatianer image- "docker.io/anylogco/anylog-network:latest".
+    constraints:
+      - pattern: '^[\w\-. ]+$'
+        error_message: Cannot contain leading or trailing spaces.
+    display:
+      group: deployment_config
+      index: 23
+
+  anylog_docker_image_archive_checksum:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      environment_type: ['airgapped']
+      verify_checksums: [true]
+    required: false
+    default: ""
+    display_label: AnyLog Docker image Archive SHA-256 Checksum
+    description: |
+      SHA-256 checksum of the archive containing conatianer image- "docker.io/anylogco/anylog-network:latest".
+    constraints:
+      - pattern: '^$|^[a-fA-F0-9]{64}$'
+        error_message: |
+          Can contain only valid SHA-256 characters (a-f, A-F, 0-9) of length 64
+          or be an empty string.
+    display:
+      group: deployment_config
+      index: 24
+
+  deb_packages_file:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      environment_type: ['airgapped']
+    required: false
+    default: deb_packages.tar.gz
+    display_label: OS Packages File Name
+    description: |
+      Name of the file containing OS packages for airgapped installation.
+    constraints:
+      - pattern: '^\S.*\S$'
+        error_message: Cannot contain leading or trailing spaces.
+    display:
+      group: deployment_config
+      index: 40
+
+
+  deb_packages_file_checksum:
+    type: string
+    hidden: false
+    allow_update: true
+    only_with:
+      verify_checksums: [true]
+      environment_type: ['airgapped']
+    required: false
+    default: ""
+    display_label: OS Packages File SHA-256 Checksum
+    description: |
+      SHA-256 checksum of the file containing OS packages for airgapped installation.
+    constraints:
+      - pattern: '^$|^[a-fA-F0-9]{64}$'
+        error_message: |
+          Can contain only valid SHA-256 characters (a-f, A-F, 0-9) of length 64
+          or be an empty string (for no checksum verification).
+    display:
+      group: deployment_config
+      index: 45

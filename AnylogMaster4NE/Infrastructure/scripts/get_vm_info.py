@@ -1,5 +1,5 @@
-from nativeedge import ctx
-from nativeedge.exceptions import NonRecoverableError
+from dell import ctx
+from dell.exceptions import NonRecoverableError
 import shutil
 
 

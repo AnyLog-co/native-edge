@@ -1,0 +1,11 @@
+---
+home_dir: "/home/{{ ansible_user }}"
+git_repo_url: https://github.com/AnyLog-co/docker-compose
+repo_local_dir_path: "{{ home_dir }}/docker-compose"
+master_config_file_path: "{{ repo_local_dir_path }}/docker-makefiles/anylog-master/node_configs.env"
+operator_config_file_path: "{{ repo_local_dir_path }}/docker-makefiles/anylog-operator/node_configs.env"
+query_config_file_path: "{{ repo_local_dir_path }}/docker-makefiles/anylog-query/node_configs.env"
+deb_packages_path: "{{ home_dir }}/deb_packages"
+support_dir: "{{ repo_local_dir_path }}/support"
+remote_gui_image: anylogco/remote-gui
+remote_gui_tag: "1.0.0"

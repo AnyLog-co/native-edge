@@ -1,0 +1,25 @@
+- name: Retrieve GUID from host VM
+  command: sudo dmidecode -s system-uuid
+  register: guid_output
+
+- name: Extract first part of GUID
+  set_fact:
+    guid_first_part: "{{ guid_output.stdout.split('-')[0] }}"
+
+- name: Configure each AnyLog node
+  include_tasks: configure_one_node.yaml
+  loop:
+    - role: master
+      anylog_type: master
+      config_path: "{{ master_config_file_path }}"
+      name_suffix: master
+    - role: operator
+      anylog_type: operator
+      config_path: "{{ operator_config_file_path }}"
+      name_suffix: operator
+    - role: query
+      anylog_type: query
+      config_path: "{{ query_config_file_path }}"
+      name_suffix: query
+  loop_control:
+    loop_var: node

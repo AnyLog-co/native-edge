@@ -1,0 +1,4 @@
+- name: Clone repository to user's home directory
+  git:
+    repo: "{{ git_repo_url }}"
+    dest: "{{ repo_local_dir_path }}"

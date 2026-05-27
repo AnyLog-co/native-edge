@@ -4,9 +4,9 @@
   become_user: "{{ vm_user_name }}"
   gather_facts: true
   tasks:
-    - name: Include nativeedge_endpoint role if target_env is NativeEdge_Endpoint
+    - name: Include dell_endpoint role if target_env is NativeEdge_Endpoint
       include_role:
-        name: nativeedge_endpoint
+        name: dell_endpoint
       vars:
         node_instance_id: "{{ node_instance_id }}"
       when: target_env == "NativeEdge_Endpoint"

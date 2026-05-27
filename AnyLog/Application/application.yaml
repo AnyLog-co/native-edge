@@ -1,7 +1,7 @@
 imports:
-  - plugin:nativeedge-plugin
-  - plugin:nativeedge-utilities-plugin
-  - plugin:nativeedge-ansible-plugin
+  - plugin:dell-plugin
+  - plugin:dell-utilities-plugin
+  - plugin:dell-ansible-plugin
 
 dsl_definitions:
   ansible_env_vars: &ansible_default_env_vars
@@ -35,7 +35,7 @@ dsl_definitions:
 node_templates:
 
   deploy_anylog:
-    type: nativeedge.nodes.ansible.Executor
+    type: dell.nodes.ansible.Executor
     properties: &deploy_anylog_inputs
       <<: *ansible_common_properties
       playbook_path: Application/ansible/anylog-deploy.yaml
@@ -82,14 +82,14 @@ node_templates:
         - ARTIFACT_DOWNLOAD_HEADERS
 
     interfaces:
-      nativeedge.interfaces.lifecycle:
+      dell.interfaces.lifecycle:
         create:
-          implementation: ansible.ne_ansible.tasks.run
+          implementation: ansible.dell_ansible.tasks.run
           inputs: *deploy_anylog_inputs
         start:
           implementation: Application/scripts/set_application_capabilities.sh
         delete:
-          implementation: ansible.ne_ansible.tasks.run
+          implementation: ansible.dell_ansible.tasks.run
           inputs:
             <<: *ansible_common_properties
             playbook_path:  Application/ansible/anylog-remove.yaml
@@ -104,5 +104,5 @@ node_templates:
               <<: *ansible_default_env_vars
     
     relationships:
-      - type: nativeedge.relationships.depends_on
+      - type: dell.relationships.depends_on
         target: vm_info

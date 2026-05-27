@@ -1,5 +1,5 @@
-from nativeedge import ctx
-from nativeedge.state import ctx_parameters as inputs
+from dell import ctx
+from dell.state import ctx_parameters as inputs
 import base64
 import yaml
 

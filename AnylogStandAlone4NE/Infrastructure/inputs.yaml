@@ -1,0 +1,19 @@
+inputs:
+
+  proxy_port:
+    type: string
+    display_label: "Endpoint #1 Proxy Port"
+    description: Port on which the proxy should be created
+    default: "22"
+    hidden: true
+  
+  connectivity_test_url:
+    type: dict
+    hidden: true
+    allow_update: false
+    display_label: Connectivity Test URL
+    description: |
+      URL of the connectivity test.
+    default:
+      internet_connected: "http://www.microsoft.com"
+      airgapped: "http://fusion-entrypoint:80"
