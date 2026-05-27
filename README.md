@@ -5,6 +5,7 @@ This repository contains all the files needed to create **Dell Native Edge bluep
 - AnyLog Master  
 - AnyLog Query  
 - AnyLog Operator  
+- AnyLog Standalone  
 - AnyLog Generic Nodes  
 
 ---
@@ -12,7 +13,7 @@ This repository contains all the files needed to create **Dell Native Edge bluep
 ## Uploading Blueprints to NativeEdge
 
 ### Step 1: Create a ZIP file
-Run the following command to package the blueprint directory (replace `directoryname` with `Anylog`, `AnylogMaster4NE`, `AnylogOperator4NE`, `AnylogQuery4NE` ):
+Run the following command to package the blueprint directory (replace `directoryname` with `Anylog`, `AnylogMaster4NE`, `AnylogOperator4NE`, `AnylogQuery4NE`, `AnylogStandAlone4NE` ):
 
 zip -r "directoryname".zip "directoryname" -x "\*/__MACOSX*" "*.DS_Store" # the latter part removes any MACOS files that will blow up the blueprint
 

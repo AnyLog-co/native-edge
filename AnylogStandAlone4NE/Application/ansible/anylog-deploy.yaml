@@ -1,0 +1,93 @@
+---
+- name: Deploy AnyLog
+  hosts: vm
+  become: yes
+  vars_files:
+    - defaults.yaml
+  tasks:
+    - name: Include setup tasks
+      include_tasks: prereqs.yaml
+      when: ENVIRONMENT_TYPE == "internet_connected"
+
+    - name: Download and Prepare offline archives
+      include_tasks: prepare_offline_archives.yaml
+      when: ENVIRONMENT_TYPE == "airgapped"
+
+    - name: Clone docker-compose from AnyLog repository
+      include_tasks: clone_repo.yaml
+      when: ENVIRONMENT_TYPE == "internet_connected"
+
+    - name: Configure master, operator, and query nodes
+      include_tasks: configure_nodes.yaml
+
+    - name: Perform docker login
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make login ANYLOG_TYPE="{{ DOCKER_PASSWORD }}"
+      args:
+        executable: /bin/bash
+      when: ENVIRONMENT_TYPE == "internet_connected"
+
+    - name: Deploy AnyLog master node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make up ANYLOG_TYPE=master
+      args:
+        executable: /bin/bash
+
+    - name: Deploy AnyLog operator node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make up ANYLOG_TYPE=operator
+      args:
+        executable: /bin/bash
+
+    - name: Deploy AnyLog query node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make up ANYLOG_TYPE=query
+      args:
+        executable: /bin/bash
+
+    - name: Validate AnyLog Deployment
+      include_tasks: validate.yaml
+
+    - name: Deploy Grafana container
+      ansible.builtin.shell: |
+        cd "{{ home_dir }}"
+        sudo docker ps --filter "name=grafana" --format '{{'{{'}}.Names{{'}}'}}' | grep -q '^grafana$' || \
+        sudo docker run -it -d --network host \
+            -e DATASOURCE_URL=http://127.0.0.1:32349 \
+            --name grafana anylogco/oh-grafana:latest
+      when: INCLUDE_GRAFANA | bool
+
+    - name: Deploy Remote-GUI
+      include_tasks: deploy_remote_gui.yaml
+      when: INCLUDE_REMOTE_GUI | bool
+
+    - name: Create facts directory if it doesn't exist
+      become: no
+      file:
+        path: "{{ ANSIBLE_FACT_PATH }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Insert AnyLog Capabilities into a fact file
+      become: no
+      copy:
+        content: >
+          {
+            "master": "{{ NODE_NAME_PREFIX }}-master-{{ guid_first_part }}",
+            "operator": "{{ NODE_NAME_PREFIX }}-operator-{{ guid_first_part }}",
+            "query": "{{ NODE_NAME_PREFIX }}-query-{{ guid_first_part }}"
+            {%- if INCLUDE_REMOTE_GUI | bool %},
+            "remote_gui": "http://127.0.0.1:{{ REMOTE_GUI_FE_PORT }}"
+            {%- endif %}
+            {%- if INCLUDE_GRAFANA | bool %},
+            "grafana": "http://127.0.0.1:3000"
+            {%- endif %}
+          }
+        dest: "{{ ANSIBLE_FACT_PATH }}/anylog_endpoint.fact"
+        mode: '0644'
+      delegate_to: localhost

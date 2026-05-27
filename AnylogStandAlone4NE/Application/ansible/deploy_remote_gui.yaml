@@ -1,0 +1,53 @@
+- name: Ensure docker-compose support directory exists
+  stat:
+    path: "{{ support_dir }}/remote-gui/configs.yaml"
+  register: remote_gui_config
+
+- name: Fail if remote-gui support config is missing
+  fail:
+    msg: >
+      {{ support_dir }}/remote-gui/configs.yaml not found.
+      Ensure docker-compose was cloned and includes the support/ tree.
+  when: not remote_gui_config.stat.exists
+
+- name: Set Remote-GUI REST connection to master node
+  ansible.builtin.lineinfile:
+    path: "{{ support_dir }}/remote-gui/configs.yaml"
+    regexp: '^  REMOTE_CONN:'
+    line: '  REMOTE_CONN: "{{ REMOTE_GUI_CONN }}"'
+
+- name: Set Grafana URL for Remote-GUI when Grafana is deployed
+  ansible.builtin.lineinfile:
+    path: "{{ support_dir }}/remote-gui/configs.yaml"
+    regexp: '^  GRAFANA_URL:'
+    line: '  GRAFANA_URL: "http://127.0.0.1:3000"'
+  when: INCLUDE_GRAFANA | bool
+
+- name: Clear Grafana URL when Grafana is not deployed
+  ansible.builtin.lineinfile:
+    path: "{{ support_dir }}/remote-gui/configs.yaml"
+    regexp: '^  GRAFANA_URL:'
+    line: '  GRAFANA_URL: ""'
+  when: not (INCLUDE_GRAFANA | bool)
+
+- name: Pull Remote-GUI image
+  ansible.builtin.shell: |
+    sudo docker pull {{ remote_gui_image }}:{{ remote_gui_tag }}
+  args:
+    executable: /bin/bash
+  when: ENVIRONMENT_TYPE == "internet_connected"
+
+- name: Regenerate and deploy Remote-GUI
+  ansible.builtin.shell: |
+    cd "{{ support_dir }}"
+    sudo rm -f remote-gui/docker-compose.yml
+    sudo make up SERVICE=remote-gui
+  args:
+    executable: /bin/bash
+
+- name: Wait for Remote-GUI frontend port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ REMOTE_GUI_FE_PORT }}"
+    delay: 5
+    timeout: 120

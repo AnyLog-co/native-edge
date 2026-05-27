@@ -1,0 +1,111 @@
+- name: Ensure node config file exists
+  stat:
+    path: "{{ node.config_path }}"
+  register: env_config_stat
+
+- name: Fail if node config file is not found
+  fail:
+    msg: "Config file {{ node.config_path }} does not exist."
+  when: not env_config_stat.stat.exists
+
+- name: Update LICENSE_KEY in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^LICENSE_KEY='
+    line: 'LICENSE_KEY="{{ ANYLOG_LICENSE }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update NODE_TYPE in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^NODE_TYPE='
+    line: 'NODE_TYPE="{{ node.anylog_type }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update COMPANY_NAME in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^COMPANY_NAME='
+    line: 'COMPANY_NAME="{{ COMPANY_NAME }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update LEDGER_CONN in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^LEDGER_CONN='
+    line: 'LEDGER_CONN="{{ LEDGER_CONN }}"'
+  when: env_config_stat.stat.exists and node.role != 'master'
+
+- name: Add NIC_TYPE line to node config
+  ansible.builtin.lineinfile:
+    path: "{{ node.config_path }}"
+    line: 'NIC_TYPE="{{ NIC_TYPE }}"'
+    create: yes
+
+- name: Update NODE_NAME in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^NODE_NAME='
+    line: 'NODE_NAME="{{ NODE_NAME_PREFIX }}-{{ node.name_suffix }}-{{ guid_first_part }}"'
+  when: env_config_stat.stat.exists
+
+- name: Update operator and query database settings
+  when: node.role in ['operator', 'query'] and env_config_stat.stat.exists
+  block:
+    - name: Update DB_TYPE in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^DB_TYPE='
+        line: 'DB_TYPE="{{ DB_TYPE }}"'
+
+    - name: Update DB_PASSWD in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^DB_PASSWD='
+        line: 'DB_PASSWD="{{ DB_PASSWD }}"'
+
+    - name: Update DB_IP in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^DB_IP='
+        line: 'DB_IP="{{ DB_IP }}"'
+
+    - name: Update DB_PORT in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^DB_PORT='
+        line: 'DB_PORT="{{ DB_PORT }}"'
+
+    - name: Update CLUSTER_NAME in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^CLUSTER_NAME='
+        line: 'CLUSTER_NAME="{{ CLUSTER_NAME }}-{{ guid_first_part }}"'
+
+- name: Update operator MQTT and TCP settings
+  when: node.role == 'operator' and env_config_stat.stat.exists
+  block:
+    - name: Update MQTT_BROKER in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^MQTT_BROKER='
+        line: 'MQTT_BROKER=172.104.228.251'
+
+    - name: Update ENABLE_MQTT in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^ENABLE_MQTT='
+        line: 'ENABLE_MQTT=true'
+
+    - name: Update TCP_BIND in node config
+      lineinfile:
+        path: "{{ node.config_path }}"
+        regexp: '^TCP_BIND='
+        line: 'TCP_BIND=true'
+
+- name: Update query TCP_BIND in node config
+  lineinfile:
+    path: "{{ node.config_path }}"
+    regexp: '^TCP_BIND='
+    line: 'TCP_BIND=true'
+  when: node.role == 'query' and env_config_stat.stat.exists

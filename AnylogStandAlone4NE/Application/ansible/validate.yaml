@@ -1,0 +1,8 @@
+- name: Validate each AnyLog node
+  include_tasks: validate_one_node.yaml
+  loop:
+    - master
+    - operator
+    - query
+  loop_control:
+    loop_var: node_suffix

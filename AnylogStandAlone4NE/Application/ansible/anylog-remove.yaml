@@ -1,0 +1,70 @@
+---
+- name: Remove AnyLog
+  hosts: vm
+  become: yes
+  vars_files:
+    - defaults.yaml
+  tasks:
+    - name: Check if directory exists from older deployment
+      stat:
+        path: "{{ repo_local_dir_path }}"
+      register: anylog_dir
+
+    - name: Remove Remote-GUI
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}/support"
+        sudo make down SERVICE=remote-gui 2>/dev/null || true
+        sudo docker rm -f remote-gui 2>/dev/null || true
+      args:
+        executable: /bin/bash
+      when:
+        - INCLUDE_REMOTE_GUI | bool
+        - anylog_dir.stat.exists and anylog_dir.stat.isdir
+
+    - name: Remove Grafana container
+      ansible.builtin.shell: |
+        sudo docker rm -f grafana 2>/dev/null || true
+      args:
+        executable: /bin/bash
+      when: INCLUDE_GRAFANA | bool
+
+    - name: Remove AnyLog query node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make down ANYLOG_TYPE=query
+      args:
+        executable: /bin/bash
+      when: anylog_dir.stat.exists and anylog_dir.stat.isdir
+
+    - name: Remove AnyLog operator node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make down ANYLOG_TYPE=operator
+      args:
+        executable: /bin/bash
+      when: anylog_dir.stat.exists and anylog_dir.stat.isdir
+
+    - name: Remove AnyLog master node
+      ansible.builtin.shell: |
+        cd "{{ repo_local_dir_path }}"
+        sudo make down ANYLOG_TYPE=master
+      args:
+        executable: /bin/bash
+      when: anylog_dir.stat.exists and anylog_dir.stat.isdir
+      register: output
+
+    - name: Print output
+      debug:
+        var: output.stdout
+      when: anylog_dir.stat.exists and anylog_dir.stat.isdir
+
+    - name: Print message when directory doesn't exist
+      debug:
+        msg: |
+          The dir "{{ repo_local_dir_path }}" doesn't exist.
+      when: not (anylog_dir.stat.exists and anylog_dir.stat.isdir)
+
+    - name: Print validation successful message
+      debug:
+        msg: "AnyLog Removal Successful"
+      when: anylog_dir.stat.exists and anylog_dir.stat.isdir

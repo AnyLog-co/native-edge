@@ -1,0 +1,53 @@
+inputs:
+
+  environment_type:
+    type: string
+    hidden: false
+    allow_update: false
+    display_label: Air-Gapped
+    description: |
+      Choose "airgapped" - all the binaries will be downloaded from the local
+      artifact store, or "internet_connected" for binaries that are available
+      on the Internet with a public URL.
+    default: internet_connected
+    constraints:
+    - valid_values:
+      - airgapped
+      - internet_connected
+    display:
+      group: application
+      index: 6
+
+  artifact_base_url:
+    type: string
+    hidden: true
+    allow_update: false
+    display_label: Artifact Download Base URL
+    description: Artifact Download Base URL value from secret.
+    default:
+      get_secret:
+      - get_input: artifact_configuration_secret_name
+      - artifact_base_url
+
+  artifact_base_url_parameters:
+    type: string
+    hidden: true
+    allow_update: false
+    display_label: Artifact Download Base URL Parameters
+    description: URL suffix that will be added by default to all artifacts URLs.
+    default:
+      get_secret:
+      - get_input: artifact_configuration_secret_name
+      - artifact_base_url_parameters
+
+  artifact_download_config_secret_name:
+    type: list
+    hidden: true
+    allow_update: false
+    display_label: Artifact Download Config Secret Name
+    description: |
+      The secret name that contains the config used for download
+      framework to fetch artifacts.
+    default:
+    - get_input: artifact_configuration_secret_name
+    - artifact_curl_config
