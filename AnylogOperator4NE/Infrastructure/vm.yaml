@@ -1,8 +1,8 @@
 imports:
-  - plugin:nativeedge-plugin
-  - plugin:nativeedge-utilities-plugin
-  - plugin:nativeedge-fabric-plugin
-  - plugin:nativeedge-ansible-plugin
+  - plugin:dell-plugin
+  - plugin:dell-utilities-plugin
+  - plugin:dell-fabric-plugin
+  - plugin:dell-ansible-plugin
 
 dsl_definitions:
   ansible_env_vars: &ansible_default_env_vars
@@ -37,7 +37,7 @@ dsl_definitions:
 node_templates:
 
   binary_image:
-    type: nativeedge.nodes.template.BinaryImage
+    type: dell.nodes.template.BinaryImage
     properties:
       binary_image_config:
         artifact:
@@ -48,21 +48,21 @@ node_templates:
               get_input: binary_image_artifact_access_token_secret_name
         version: { get_input: binary_image_version }
     interfaces:
-      nativeedge.interfaces.lifecycle:
+      dell.interfaces.lifecycle:
         precreate:
           implementation:
-            nativeedge.nativeedge_plugin.tasks.validate_binary_image_config
+            dell.dell_plugin.tasks.validate_binary_image_config
         create:
           implementation:
-            nativeedge.nativeedge_plugin.tasks.upload_binary
+            dell.dell_plugin.tasks.upload_binary
         delete:
           implementation:
-            nativeedge.nativeedge_plugin.tasks.delete_binary
+            dell.dell_plugin.tasks.delete_binary
 
   netplan_node:
-    type: nativeedge.nodes.CloudInit.CloudConfig
+    type: dell.nodes.CloudInit.CloudConfig
     interfaces:
-      nativeedge.interfaces.lifecycle:
+      dell.interfaces.lifecycle:
         create:
           implementation: Infrastructure/scripts/prepare_resource_config.py
           executor: central_deployment_agent
@@ -75,7 +75,7 @@ node_templates:
               dns: { get_input: dns }
 
   cloud_init:
-    type: nativeedge.nodes.CloudInit.CloudConfig
+    type: dell.nodes.CloudInit.CloudConfig
     properties:
       resource_config:
         runcmd:
@@ -103,7 +103,7 @@ node_templates:
             ssh_authorized_keys:
               - get_secret: { get_input: ssh_user_public_key_secret_name }
     interfaces:
-      nativeedge.interfaces.lifecycle:
+      dell.interfaces.lifecycle:
         precreate:
           implementation: Infrastructure/scripts/prepare_netplan.py
           executor: central_deployment_agent
@@ -116,11 +116,11 @@ node_templates:
                 - { get_attribute: [SELF, resource_config] }
                 - { get_input: cloudinit }
     relationships:
-      - type: nativeedge.relationships.depends_on
+      - type: dell.relationships.depends_on
         target: netplan_node
 
   vm:
-    type: nativeedge.nodes.ServiceComponent
+    type: dell.nodes.ServiceComponent
     properties:
       resource_config:
         blueprint:
@@ -153,17 +153,17 @@ node_templates:
               { get_attribute: [cloud_init, resource_config] }
             iso_files: { get_input: iso_files }
     relationships:
-       - type: nativeedge.relationships.depends_on
+       - type: dell.relationships.depends_on
          target: binary_image
-       - type: nativeedge.relationships.depends_on
+       - type: dell.relationships.depends_on
          target: cloud_init
 
   vm_ssh_proxy:
-    type: nativeedge.nodes.Root
+    type: dell.nodes.Root
     interfaces:
-      nativeedge.interfaces.lifecycle:
+      dell.interfaces.lifecycle:
         create:
-          implementation: nativeedge.nativeedge_plugin.tasks.get_eo_proxy
+          implementation: dell.dell_plugin.tasks.get_eo_proxy
           max_retries: 2
           inputs:
             serviceTag:
@@ -172,7 +172,7 @@ node_templates:
               get_attribute: [vm, capabilities, vm_name]
             port: { get_input: proxy_port }
         update:
-          implementation: nativeedge.nativeedge_plugin.tasks.get_eo_proxy
+          implementation: dell.dell_plugin.tasks.get_eo_proxy
           max_retries: 2
           inputs:
             serviceTag:
@@ -183,11 +183,11 @@ node_templates:
         check_drift:
           implementation: Infrastructure/scripts/check_drift.py
     relationships:
-       - type: nativeedge.relationships.depends_on
+       - type: dell.relationships.depends_on
          target: vm
 
   vm_info:
-    type: nativeedge.nodes.ansible.Executor
+    type: dell.nodes.ansible.Executor
     properties:
       <<: *ansible_common_properties
       playbook_path: Infrastructure/ansible/get_vm_info.yaml
@@ -206,10 +206,10 @@ node_templates:
         - ansible_user
         - ansible_ssh_private_key_file
     relationships:
-      - type: nativeedge.relationships.connected_to
+      - type: dell.relationships.connected_to
         target: vm_ssh_proxy
         target_interfaces:
-          nativeedge.interfaces.relationship_lifecycle:
+          dell.interfaces.relationship_lifecycle:
             establish:
               implementation:
                 Infrastructure/scripts/get_vm_info.py

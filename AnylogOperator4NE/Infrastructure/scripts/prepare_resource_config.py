@@ -1,7 +1,7 @@
 import yaml
-from nativeedge import ctx
-from nativeedge.state import ctx_parameters as inputs
-from nativeedge.exceptions import NonRecoverableError
+from dell import ctx
+from dell.state import ctx_parameters as inputs
+from dell.exceptions import NonRecoverableError
 
 template = inputs.get("template")
 parameters = inputs.get("parameters")

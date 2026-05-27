@@ -1,4 +1,6 @@
-# Anylog Standalone (Native Edge)
+# Anylog Standalone (Dell Automation Platform)
+
+TOSCA DSL: **`dell_1_1`** · requires DAP orchestrator **1.1.0.0** (or compatible).
 
 Deploys **one VM** with three AnyLog containers on the same host:
 

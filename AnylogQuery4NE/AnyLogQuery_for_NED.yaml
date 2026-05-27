@@ -1,9 +1,9 @@
-tosca_definitions_version: nativeedge_1_1
+tosca_definitions_version: dell_1_1
 description: >
   Deploys VM with Anylog Query Node
 
 imports:
-  - nativeedge/types/types.yaml
+  - dell/types/types.yaml
   - Infrastructure/inputs_common.yaml
   - Infrastructure/inputs.yaml
   - Infrastructure/vm.yaml

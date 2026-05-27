@@ -70,10 +70,10 @@ inputs:
     display_label: Service Tag
     description: |
       The Endpoint where the Virtual Machine will be created.
-      For NativeEdge Endpoint: choose one of OnboardECE deployments.
+      For Dell Endpoint: choose one of OnboardECE deployments.
     constraints:
     - labels:
-      - cloud: nativeedge
+      - cloud: dell
     display:
       group: ned
       index: 1
@@ -240,7 +240,7 @@ inputs:
 
   network_settings:
     type: list
-    item_type: nativeedge.types.VMDeployNetworkSettings
+    item_type: dell.types.VMDeployNetworkSettings
     hidden: true
     allow_update: true
     display_label: Network Settings
@@ -257,7 +257,7 @@ inputs:
     display_label: Cloud Init Config
     description: |
       Cloud init cloud config, can be obtained with
-      nativeedge.nodes.CloudInit.CloudConfig
+      dell.nodes.CloudInit.CloudConfig
     required: false
     default: {}
 
@@ -455,7 +455,7 @@ inputs:
       A list of GPU logical names.
       Please make sure to select the GPU that is currently available in your
       Endpoint. A list of GPU logical names available for your endpoint can
-      be found in the NativeEdge UI under Endpoints / Hardware / Peripherals
+      be found in the Dell Automation Platform UI under Endpoints / Hardware / Peripherals
     required: false
     constraints:
     - valid_values:
